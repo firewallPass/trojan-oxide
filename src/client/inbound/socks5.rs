@@ -3,7 +3,7 @@ use crate::{
     expect_buf_len,
     utils::{ConnectionRequest, MixAddrType, ParserError},
 };
-
+use std::pin::Pin;
 #[cfg(feature = "udp")]
 use crate::client::utils::Socks5UdpStream;
 use futures::Future;
@@ -174,7 +174,7 @@ impl Socks5Request {
 }
 
 impl RequestFromClient for Socks5Request {
-    type Accepting<'a> = impl Future<Output = ClientRequestAcceptResult> + Send;
+    type Accepting<'a> = Pin<Box<dyn Future<Output = ClientRequestAcceptResult> + Send + 'a>>;
 
     fn new(inbound: TcpStream) -> Self {
         Self {
@@ -186,6 +186,8 @@ impl RequestFromClient for Socks5Request {
     }
 
     fn accept<'a>(mut self) -> Self::Accepting<'a> {
-        async { Ok::<_, Error>((self.impl_accept().await?, self.addr)) }
+        Box::pin(async move { 
+            Ok::<_, Error>((self.impl_accept().await?, self.addr)) 
+        })
     }
 }

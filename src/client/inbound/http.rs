@@ -3,7 +3,7 @@ use crate::{
     utils::ConnectionRequest,
     utils::{MixAddrType, ParserError},
 };
-
+use std::pin::Pin;
 use anyhow::{Error, Result};
 use futures::Future;
 // use futures::future;
@@ -190,10 +190,12 @@ impl HttpRequest {
 }
 
 impl RequestFromClient for HttpRequest {
-    type Accepting<'a> = impl Future<Output = ClientRequestAcceptResult> + Send;
+    type Accepting<'a> = Pin<Box<dyn Future<Output = ClientRequestAcceptResult> + Send + 'a>>;
 
     fn accept<'a>(mut self) -> Self::Accepting<'a> {
-        async move { Ok::<_, Error>((self.impl_accept().await?, self.addr)) }
+        Box::pin(async move { 
+            Ok::<_, Error>((self.impl_accept().await?, self.addr)) 
+        })
     }
 
     fn new(inbound: TcpStream) -> Self {
